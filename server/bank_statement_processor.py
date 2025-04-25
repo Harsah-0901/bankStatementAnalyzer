@@ -122,9 +122,15 @@ class BankStatementProcessor:
         summary = {cat: 0 for cat in self.categories}
         for txn in categorized_transactions:
             cat = txn.get("category", "Miscellaneous")
-            if txn["type"] == "debit" and isinstance(txn["amount"], (int, float)):
-                summary[cat] += txn["amount"]
+            if txn.get("type", "").lower() == "debit":
+                try:
+                    amount = float(txn["amount"])
+                    summary[cat] += amount
+                except (ValueError, TypeError):
+                    continue
         return summary
+
+
 
     def process_file(self, file_path):
         text = self.extract_text_from_file(file_path)
