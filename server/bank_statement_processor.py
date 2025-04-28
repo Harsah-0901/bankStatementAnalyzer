@@ -141,3 +141,4 @@ class BankStatementProcessor:
             "transactions": categorized,
             "summary": summary
         }
+
