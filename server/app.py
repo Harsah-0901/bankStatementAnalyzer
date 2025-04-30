@@ -97,7 +97,7 @@ def get_profile():
     return jsonify(user)
 
 @app.route("/upload", methods=["POST"])
-@auth_required
+# @auth_required
 def upload_file():
     """Upload and process a bank statement"""
     if 'file' not in request.files:

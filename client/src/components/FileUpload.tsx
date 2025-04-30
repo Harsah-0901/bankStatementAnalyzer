@@ -29,8 +29,15 @@ const FileUpload: React.FC = () => {
   const handleUpload = async () => {
     if (!file) return alert("Please select a file first.");
 
+    // Retrieve user_id from localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user?.id) {
+      return alert("You must be logged in to upload a file.");
+    }
+
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("user_id", user.id);  // Attach user_id from localStorage
 
     try {
       setLoading(true);

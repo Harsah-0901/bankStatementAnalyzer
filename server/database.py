@@ -12,16 +12,16 @@ import bcrypt
 load_dotenv(dotenv_path=Path(".env"))
 
 # MySQL connection settings
-username = os.getenv("DB_USERNAME", "root")
-password = os.getenv("DB_PASSWORD", "")  # Make sure this isn't empty if your MySQL requires a password
-host = os.getenv("DB_HOST", "localhost")
+username = os.getenv("DB_USERNAME", "rohan")
+password = os.getenv("DB_PASSWORD", "Rohan%40220702")  # Make sure this isn't empty if your MySQL requires a password
+host = os.getenv("DB_HOST", "localhost:3306")
 database = os.getenv("DB_NAME", "bank_statements")
 
 # Print connection details for debugging (remove in production)
 print(f"Connecting to MySQL: {username}@{host}/{database}")
 
 # Create the database URL
-DATABASE_URL = f"mysql+pymysql://root:Harsha%4012345@localhost:3306/bank_statements"
+DATABASE_URL = f"mysql+pymysql://rohan:Rohan%40220702@localhost:3306/bank_statements"
 
 # Create the engine with explicit charset setting
 engine = create_engine(
