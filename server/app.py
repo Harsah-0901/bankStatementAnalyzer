@@ -1,261 +1,190 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import os
-import re
-import json
-import pandas as pd
-import PyPDF2
-import docx
-import google.generativeai as genai
-from dotenv import load_dotenv
-from pathlib import Path
-from db_connection import execute_query
 import datetime
+from enhanced_processor import BankStatementProcessor
+from auth_module import register_user, login_user, token_required
+from db_connection import execute_query, initialize_db_pool
 
-# Load environment variables
-load_dotenv(dotenv_path=Path(".env"))
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
+# Create Flask app
+app = Flask(__name__)
+CORS(app)
 
-class BankStatementProcessor:
-    def __init__(self):
-        self.model = genai.GenerativeModel("models/gemini-1.5-pro")
-        # Get categories from database
-        self.categories = self._get_categories_from_db()
+# Configure upload folder
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Initialize the database connection pool
+initialize_db_pool()
+
+# Initialize the bank statement processor
+processor = BankStatementProcessor()
+
+# Auth routes
+@app.route("/api/register", methods=["POST"])
+def register():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+    
+    user_id, error = register_user(email, password, first_name, last_name)
+    
+    if error:
+        return jsonify({"error": error}), 400
+    
+    return jsonify({"message": "User registered successfully", "user_id": user_id}), 201
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password are required"}), 400
+    
+    user_data, error = login_user(email, password)
+    
+    if error:
+        return jsonify({"error": error}), 401
+    
+    return jsonify(user_data), 200
+
+# Statement processing routes
+@app.route("/api/upload", methods=["POST"])
+@token_required
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+    
+    statement_name = request.form.get('statement_name', None)
+    
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{datetime.datetime.now().timestamp()}_{filename}")
+    
+    try:
+        file.save(file_path)
         
-    def _get_categories_from_db(self):
-        """Fetch categories from the database"""
-        try:
-            categories_data = execute_query(
-                "SELECT id, name FROM categories",
-                fetch=True
-            )
-            return {cat['name']: cat['id'] for cat in categories_data}
-        except Exception as e:
-            print(f"Error fetching categories: {e}")
-            # Fallback to default categories
-            return {
-                "Utilities": 1,
-                "Food & Dining": 2,
-                "Travel & Transportation": 3,
-                "Subscriptions": 4,
-                "EMIs or Loans": 5,
-                "Shopping": 6,
-                "Healthcare": 7,
-                "Miscellaneous": 8
-            }
-            
-    def extract_from_pdf(self, file_path):
-        text = ""
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-        return text
-
-    def extract_from_excel(self, file_path):
-        df = pd.read_excel(file_path)
-        return df.to_string()
-
-    def extract_from_csv(self, file_path):
-        df = pd.read_csv(file_path)
-        return df.to_string()
-
-    def extract_from_word(self, file_path):
-        doc = docx.Document(file_path)
-        text = ""
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-        for table in doc.tables:
-            for row in table.rows:
-                row_text = [cell.text for cell in row.cells]
-                text += "\t".join(row_text) + "\n"
-        return text
-
-    def extract_text_from_file(self, file_path):
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext == ".pdf":
-            return self.extract_from_pdf(file_path)
-        elif ext in [".xlsx", ".xls"]:
-            return self.extract_from_excel(file_path)
-        elif ext == ".csv":
-            return self.extract_from_csv(file_path)
-        elif ext in [".docx", ".doc"]:
-            return self.extract_from_word(file_path)
-        else:
-            raise ValueError(f"Unsupported file format: {ext}")
-
-    def parse_transactions(self, text):
-        prompt = f"""
-        Extract transaction data from the following bank statement text. 
-        For each transaction, provide: date, description, amount, and type (credit/debit).
-        Try to determine the date format used and standardize it to YYYY-MM-DD format.
-        If the transaction is money spent/going out, mark it as "debit".
-        If the transaction is money received/coming in, mark it as "credit".
-        Format the output as a JSON array.
-        Bank statement text:
-        {text[:5000]}
-        JSON Format:
-        [
-          {{
-            "date": "YYYY-MM-DD",
-            "description": "Transaction description",
-            "amount": 123.45,
-            "type": "credit or debit"
-          }}
-        ]
-        """
-        response = self.model.generate_content(prompt)
-        result = response.text
-        match = re.search(r'\[.*\]', result, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group())
-            except:
-                return []
-        return []
-
-    def categorize_transactions(self, transactions):
-        categorized = []
-        category_names = list(self.categories.keys())
+        # Get user ID from token
+        user_id = request.user['id']
         
-        for batch in self._batch_transactions(transactions, 20):
-            prompt = f"""
-            Categorize the following transactions into these categories:
-            {', '.join(category_names)}
-            Transactions:
-            {json.dumps(batch, indent=2)}
-            For each transaction, add a "category" field. Choose the most appropriate category based on the transaction description.
-            Return the result as a JSON array.
-            """
-            response = self.model.generate_content(prompt)
-            result = response.text
-            match = re.search(r'\[.*\]', result, re.DOTALL)
-            if match:
-                try:
-                    batch_categorized = json.loads(match.group())
-                    categorized.extend(batch_categorized)
-                except:
-                    pass
-        return categorized
-
-    def _batch_transactions(self, transactions, batch_size):
-        for i in range(0, len(transactions), batch_size):
-            yield transactions[i:i + batch_size]
-
-    def generate_spending_summary(self, categorized_transactions):
-        summary = {cat: 0 for cat in self.categories.keys()}
-        for txn in categorized_transactions:
-            cat = txn.get("category", "Miscellaneous")
-            if txn.get("type", "").lower() == "debit":
-                try:
-                    amount = float(txn["amount"])
-                    summary[cat] += amount
-                except (ValueError, TypeError):
-                    continue
-        return summary
-
-    def process_file(self, file_path, user_id, statement_name=None):
-        """Process a bank statement file and save results to database"""
-        try:
-            # Extract text from file
-            text = self.extract_text_from_file(file_path)
-            
-            # Create statement record
-            statement_id = execute_query(
-                """INSERT INTO statements 
-                   (user_id, statement_name, file_name, processing_status) 
-                   VALUES (%s, %s, %s, 'pending')""",
-                (user_id, statement_name or os.path.basename(file_path), os.path.basename(file_path))
-            )
-            
-            # Parse transactions
-            transactions = self.parse_transactions(text)
-            
-            # Categorize transactions
-            categorized = self.categorize_transactions(transactions)
-            
-            # Save transactions to database
-            for txn in categorized:
-                try:
-                    # Get category ID
-                    category_name = txn.get("category", "Miscellaneous")
-                    category_id = self.categories.get(category_name, self.categories["Miscellaneous"])
-                    
-                    # Format date
-                    date_str = txn.get("date", None)
-                    try:
-                        # Try to parse the date
-                        date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-                    except (ValueError, TypeError):
-                        # If date parsing fails, use today's date
-                        date_obj = datetime.date.today()
-                    
-                    # Insert transaction
-                    execute_query(
-                        """INSERT INTO transactions 
-                           (statement_id, date, description, amount, type, category_id) 
-                           VALUES (%s, %s, %s, %s, %s, %s)""",
-                        (
-                            statement_id, 
-                            date_obj,
-                            txn.get("description", ""),
-                            float(txn.get("amount", 0)),
-                            txn.get("type", "debit").lower(),
-                            category_id
-                        )
-                    )
-                except Exception as e:
-                    print(f"Error saving transaction: {e}")
-            
-            # Generate and save spending summary
-            summary = self.generate_spending_summary(categorized)
-            for category, total in summary.items():
-                if total > 0:
-                    try:
-                        execute_query(
-                            """INSERT INTO spending_summaries 
-                               (statement_id, category_id, total_amount) 
-                               VALUES (%s, %s, %s)""",
-                            (
-                                statement_id,
-                                self.categories.get(category, self.categories["Miscellaneous"]),
-                                total
-                            )
-                        )
-                    except Exception as e:
-                        print(f"Error saving summary: {e}")
-            
-            # Update statement status
-            execute_query(
-                """UPDATE statements 
-                   SET processing_status = 'completed', processed_at = NOW() 
-                   WHERE id = %s""",
-                (statement_id,)
-            )
-            
-            # Return the results
-            return {
-                "statement_id": statement_id,
-                "transactions": categorized,
-                "summary": summary
-            }
-            
-        except Exception as e:
-            # Update statement status to failed
-            if 'statement_id' in locals():
-                execute_query(
-                    """UPDATE statements 
-                       SET processing_status = 'failed' 
-                       WHERE id = %s""",
-                    (statement_id,)
-                )
-            raise e
+        # Process the file
+        result = processor.process_file(file_path, user_id, statement_name)
         
-        if __name__ == "__main__":
-            print("Bank Statement Analyzer is ready.")
-
-        # Example: Initialize processor (optional unless you want to run something directly)
-        processor = BankStatementProcessor()
+        # Clean up the file
+        os.remove(file_path)
         
-        # Example: You could test a file here
-        # result = processor.process_file("sample_statement.pdf", user_id=1)
-        # print(json.dumps(result, indent=2))
+        return jsonify(result)
+    
+    except Exception as e:
+        # Clean up the file if it exists
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/statements", methods=["GET"])
+@token_required
+def get_statements():
+    user_id = request.user['id']
+    
+    statements = execute_query(
+        """SELECT id, statement_name, bank_name, statement_period, file_name, 
+                 processing_status, processed_at, created_at 
+          FROM statements 
+          WHERE user_id = %s 
+          ORDER BY created_at DESC""",
+        (user_id,),
+        fetch=True
+    )
+    
+    # Convert datetime objects to strings for JSON serialization
+    for statement in statements:
+        for key, value in statement.items():
+            if isinstance(value, (datetime.datetime, datetime.date)):
+                statement[key] = value.isoformat()
+    
+    return jsonify({"statements": statements})
+
+@app.route("/api/statements/<int:statement_id>", methods=["GET"])
+@token_required
+def get_statement_details(statement_id):
+    user_id = request.user['id']
+    
+    # Verify statement belongs to user
+    statement = execute_query(
+        """SELECT id, statement_name, bank_name, statement_period, file_name, 
+                 processing_status, processed_at, created_at 
+          FROM statements 
+          WHERE id = %s AND user_id = %s""",
+        (statement_id, user_id),
+        fetch=True
+    )
+    
+    if not statement:
+        return jsonify({"error": "Statement not found"}), 404
+    
+    statement = statement[0]
+    
+    # Get transactions
+    transactions = execute_query(
+        """SELECT t.id, t.date, t.description, t.amount, t.type, c.name as category 
+          FROM transactions t
+          JOIN categories c ON t.category_id = c.id
+          WHERE t.statement_id = %s
+          ORDER BY t.date DESC""",
+        (statement_id,),
+        fetch=True
+    )
+    
+    # Get spending summary
+    summary = execute_query(
+        """SELECT c.name as category, s.total_amount 
+          FROM spending_summaries s
+          JOIN categories c ON s.category_id = c.id
+          WHERE s.statement_id = %s
+          ORDER BY s.total_amount DESC""",
+        (statement_id,),
+        fetch=True
+    )
+    
+    # Convert datetime objects to strings for JSON serialization
+    for key, value in statement.items():
+        if isinstance(value, (datetime.datetime, datetime.date)):
+            statement[key] = value.isoformat()
+    
+    for transaction in transactions:
+        for key, value in transaction.items():
+            if isinstance(value, (datetime.datetime, datetime.date)):
+                transaction[key] = value.isoformat()
+    
+    return jsonify({
+        "statement": statement,
+        "transactions": transactions,
+        "summary": summary
+    })
+
+@app.route("/api/categories", methods=["GET"])
+@token_required
+def get_categories():
+    categories = execute_query(
+        "SELECT id, name, description FROM categories",
+        fetch=True
+    )
+    
+    return jsonify({"categories": categories})
+
+if __name__ == "__main__":
+    app.run(debug=True)

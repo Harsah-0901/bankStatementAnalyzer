@@ -1,13 +1,26 @@
 import React from "react";
-import FileUpload from "./components/FileUpload";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Upload from "./components/Upload";
+import StatementList from "./components/StatementList";
 
-const App: React.FC = () => {
+const App = () => {
+  const isLoggedIn = !!localStorage.getItem("token");
+
   return (
     <div>
-      <h1 style={{ textAlign: "center", marginTop: "20px" }}>
-        Bank Statement Analyzer
-      </h1>
-      <FileUpload />
+      <h1>Bank Statement Analyzer</h1>
+      {!isLoggedIn ? (
+        <>
+          <Register />
+          <Login />
+        </>
+      ) : (
+        <>
+          <Upload />
+          <StatementList />
+        </>
+      )}
     </div>
   );
 };
