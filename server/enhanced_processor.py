@@ -249,13 +249,3 @@ class BankStatementProcessor:
                     (statement_id,)
                 )
             raise e
-        
-        if __name__ == "__main__":
-            print("Bank Statement Analyzer is ready.")
-
-        # Example: Initialize processor (optional unless you want to run something directly)
-        processor = BankStatementProcessor()
-        
-        # Example: You could test a file here
-        # result = processor.process_file("sample_statement.pdf", user_id=1)
-        # print(json.dumps(result, indent=2))
