@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useNavigate } from "react-router";
 
 export default function StatementList() {
   const [statements, setStatements] = useState<any[]>([]);
@@ -11,6 +12,8 @@ export default function StatementList() {
           console.error("Error fetching statements:", err);
         });
     }, []);
+
+    const navigate = useNavigate();
     
 
   return (
@@ -19,7 +22,9 @@ export default function StatementList() {
       <ul>
         {statements.map((s) => (
           <li key={s.id}>
-            {s.statement_name} - {s.bank_name} ({s.processing_status})
+            {s.statement_name} - {s.bank_name} ({s.processing_status}) <button type="submit" onClick={()=>{
+              navigate("/dashboard")
+            }}>-- Generate Statement</button>
           </li>
         ))}
       </ul>
