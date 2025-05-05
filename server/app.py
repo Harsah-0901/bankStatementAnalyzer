@@ -118,6 +118,44 @@ def get_statements():
     
     return jsonify({"statements": statements})
 
+@app.route('/api/categories/by-statement/<int:statement_id>', methods=['GET'])
+def get_categories_by_statement(statement_id):
+    try:
+        # First, get total amount for the statement
+        total_query = """
+        SELECT SUM(total_amount) as total
+        FROM spending_summaries
+        WHERE statement_id = %s
+        """
+        total_result = execute_query(total_query, (statement_id,), fetch=True)
+        total_amount = total_result[0]['total'] if total_result[0]['total'] else 0
+
+        if total_amount == 0:
+            return jsonify({"status": "success", "data": [], "total_amount": 0}), 200
+
+        # Now get categories and calculate percentage
+        query = """
+        SELECT c.id AS category_id,
+               c.name AS category_name,
+               ss.total_amount,
+               ROUND((ss.total_amount / %s) * 100, 2) AS percentage
+        FROM spending_summaries ss
+        JOIN categories c ON ss.category_id = c.id
+        WHERE ss.statement_id = %s
+        """
+        data = execute_query(query, (total_amount, statement_id), fetch=True)
+
+        return jsonify({
+            "status": "success",
+            "total_amount": total_amount,
+            "data": data
+        }), 200
+
+    except Exception as e:
+        print(f"Error fetching categories: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/statements/<int:statement_id>", methods=["GET"])
 @token_required
 def get_statement_details(statement_id):
