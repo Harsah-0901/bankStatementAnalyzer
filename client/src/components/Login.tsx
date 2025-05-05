@@ -13,16 +13,46 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       window.location.reload();
     } catch (err: any) {
-      alert(err.response.data.error);
+      alert(err.response?.data?.error || "Login failed");
     }
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <input name="email" placeholder="Email" onChange={handleChange} />
-      <input name="password" placeholder="Password" type="password" onChange={handleChange} />
-      <button onClick={handleLogin}>Login</button>
+    <div className="min-h-screen flex items-center justify-end bg-gray-100 w-full ">
+      <div className="w-full max-w-md bg-gray-200 rounded-lg shadow-md p-8  flex flex-col items-center justify-center h-[65vh]">
+        <h2 className="text-2xl font-bold mb-8">Login</h2>
+
+        <div className="mb-4">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            Email
+          </label>
+          <input
+            name="email"
+            type="email"
+            onChange={handleChange}
+            className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <input
+            name="password"
+            type="password"
+            onChange={handleChange}
+            className="mt-1 w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <button
+          onClick={handleLogin}
+          className="w-1/2 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-500 transition duration-200"
+        >
+          Login
+        </button>
+      </div>
     </div>
   );
 }

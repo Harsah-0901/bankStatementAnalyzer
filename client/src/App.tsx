@@ -5,6 +5,8 @@ import Upload from "./components/Upload";
 import StatementList from "./components/StatementList";
 import { Routes,Route } from "react-router";
 import Dashboard from "./components/Dashboard";
+import SignupPage from "./pages/SignupPage";
+import UploadStatement from "./pages/UploadStatement";
 
 const App = () => {
   const isLoggedIn = !!localStorage.getItem("token");
@@ -12,16 +14,14 @@ const App = () => {
   return (
     
       <div>
-      <h1>Bank Statement Analyzer</h1>
+      
       {!isLoggedIn ? (
         <>
-          <Register />
-          <Login />
+          <SignupPage/>
         </>
       ) : (
         <>
-          <Upload />
-          <StatementList />
+          <UploadStatement/>
         </>
       )}
     </div>
