@@ -162,10 +162,17 @@ class BankStatementProcessor:
             # Create statement record
             statement_id = execute_query(
                 """INSERT INTO statements 
-                   (user_id, statement_name, file_name, processing_status) 
-                   VALUES (%s, %s, %s, 'pending')""",
-                (user_id, statement_name or os.path.basename(file_path), os.path.basename(file_path))
+                   (user_id, statement_name, file_name, processing_status, bank_name, statement_period) 
+                   VALUES (%s, %s, %s, 'pending', %s, %s)""",
+                (
+                    user_id,
+                    statement_name or os.path.basename(file_path),
+                    os.path.basename(file_path),
+                    None,  # bank_name placeholder
+                    None   # statement_period placeholder
+                )
             )
+
             
             # Parse transactions
             transactions = self.parse_transactions(text)

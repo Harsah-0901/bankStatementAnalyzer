@@ -63,3 +63,19 @@ def execute_query(query, params=None, fetch=False):
         connection.close()
         
     return result
+
+    
+    def get_all_statements(user_id=None):
+        query = """
+            SELECT 
+                id, statement_name, file_name, processing_status, 
+                bank_name, statement_period, processed_at, created_at
+                FROM statements
+            """
+        params = ()
+        if user_id is not None:
+            query += " WHERE user_id = %s"
+            params = (user_id,)
+    
+        query += " ORDER BY created_at DESC"
+        return execute_query(query, params=params, fetch=True)
