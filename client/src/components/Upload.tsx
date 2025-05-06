@@ -43,6 +43,7 @@ export default function Upload() {
 
   return (
     <div className="relative">
+      
       {/* Loading Overlay */}
       {isUploading && (
         <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
@@ -52,6 +53,7 @@ export default function Upload() {
           </div>
         </div>
       )}
+      
 
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">Upload Bank Statement</h2>
@@ -100,12 +102,14 @@ export default function Upload() {
           >
             Upload
           </button>
+          
           <button
             onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-400"
+            className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-400 z-50"
           >
             Logout
           </button>
+
         </div>
       </div>
     </div>
