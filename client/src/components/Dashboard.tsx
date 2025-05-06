@@ -19,7 +19,7 @@ export default function Dashboard() {
   return (
     <div className='w-full h-screen border-2 border-red-500 flex flex-row'>
       <div className='w-1/2 border-2 border-red-500 h-screen'>
-        <div className='w-full border-2 border-red-800 h-1/2'><CategoriesPieChart/></div>
+        <div className='w-full border-2 border-red-800 h-1/2 flex items-center justify-center'><CategoriesPieChart/></div>
         <div className='w-full border-2 border-red-800 h-1/2'><BarcChart/></div>
       </div>
       <div className='w-1/2 border-2 border-red-500 h-screen'>

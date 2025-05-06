@@ -55,12 +55,12 @@ export default function Upload() {
       )}
       
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="p-6 rounded-lg shadow-md text-white">
         <h2 className="text-xl font-semibold mb-4">Upload Bank Statement</h2>
 
         {/* File input */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
+          <label className="block text-sm font-medium text-white mb-1">Select File</label>
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -84,7 +84,7 @@ export default function Upload() {
 
         {/* Statement name (auto-filled) */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Statement Name</label>
+          <label className="block text-sm font-medium text-white mb-1">Statement Name</label>
           <input
             type="text"
             value={statementName}

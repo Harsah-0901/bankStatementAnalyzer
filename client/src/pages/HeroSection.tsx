@@ -96,7 +96,7 @@ export default function HeroSection() {
 
       <div className="relative isolate px-6 pt-14 lg:px-8">
         
-        <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
+      <div className="mx-auto max-w-2xl h-[calc(100vh-4rem)] flex items-center justify-center flex-col">
           <div className="hidden sm:mb-8 sm:flex sm:justify-center">
             <div className="relative rounded-full px-3 py-1 text-sm/6 text-gray-300 ring-1 ring-gray-400/10 hover:ring-gray-400/20">
               Shoutout to Generative AI - Gemini{' '}
