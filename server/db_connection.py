@@ -65,7 +65,7 @@ def execute_query(query, params=None, fetch=False):
     return result
 
     
-    def get_all_statements(user_id=None):
+def get_all_statements(user_id=None):
         query = """
             SELECT 
                 id, statement_name, file_name, processing_status, 

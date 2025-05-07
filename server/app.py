@@ -156,6 +156,57 @@ def get_categories_by_statement(statement_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/transaction-count/<int:statement_id>", methods=["GET"])
+def get_transaction_count(statement_id):
+    try:
+        # Directly get credit and debit counts for the statement
+        query = """
+        SELECT 
+            type, 
+            COUNT(*) AS count 
+        FROM transactions 
+        WHERE statement_id = %s 
+        GROUP BY type
+        """
+        result = execute_query(query, (statement_id,), fetch=True)
+
+        # Format result
+        counts = {"credit": 0, "debit": 0}
+        for row in result:
+            counts[row["type"]] = row["count"]
+
+        return jsonify({ "transaction_counts": counts}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/description-summary/<int:statement_id>", methods=["GET"])
+def get_description_summary(statement_id):
+    try:
+        query = """
+        SELECT 
+            description,
+            SUM(amount) AS total_amount
+        FROM transactions
+        WHERE statement_id = %s
+        GROUP BY description
+        ORDER BY total_amount DESC
+        """
+        results = execute_query(query, (statement_id,), fetch=True)
+
+        return jsonify({
+            "status": "success",
+            "statement_id": statement_id,
+            "data": results
+        }), 200
+
+    except Exception as e:
+        print(f"Error in description summary: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
 @app.route("/api/statements/<int:statement_id>", methods=["GET"])
 @token_required
 def get_statement_details(statement_id):
