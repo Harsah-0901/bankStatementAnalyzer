@@ -9,19 +9,42 @@ export default function StatementList() {
   const statementsPerPage = 3;
   const navigate = useNavigate();
 
-  const handleGenerate = async (statementId: string) => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/api/categories/by-statement/${statementId}`
-      );
-      const data = response.data;
-      localStorage.setItem("statementData", JSON.stringify(data));
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Error fetching statement data:", error);
-      alert("Failed to generate statement insights");
-    }
-  };
+  
+
+const handleGenerate = async (statementId: string) => {
+  
+
+  try {
+    // Fetch category summary data
+    const categoryResponse = await axios.get(
+      `http://localhost:5000/api/categories/by-statement/${statementId}`
+    );
+    const categoryData = categoryResponse.data;
+    localStorage.setItem("categorySummary", JSON.stringify(categoryData));
+
+    // Fetch transaction counts (credit/debit)
+    const countResponse = await axios.get(
+      `http://localhost:5000/api/transaction-count/${statementId}`
+    );
+    const countData = countResponse.data;
+    localStorage.setItem("transactionCounts", JSON.stringify(countData));
+
+    // Fetch description summary data
+    const descriptionResponse = await axios.get(
+      `http://localhost:5000/api/description-summary/${statementId}`
+    );
+    const descriptionData = descriptionResponse.data;
+    localStorage.setItem("descriptionSummary", JSON.stringify(descriptionData));
+
+    // Navigate to dashboard
+    navigate("/dashboard");
+  } catch (error) {
+    console.error("Error fetching statement data:", error);
+    alert("Failed to generate statement insights");
+  }
+};
+
+  
 
   useEffect(() => {
     api

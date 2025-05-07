@@ -1,32 +1,51 @@
-import React, { PureComponent } from 'react';
-import { BarChart, Bar, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Text
+} from 'recharts';
 
-const data = [
-  {
-    name: 'Page A',
-    uv: 4000,
-    pv: 2400,
-    amt: 2400,
-  },
-  {
-    name: 'Page B',
-    uv: 3000,
-    pv: 1398,
-    amt: 2210,
-  },
-  
-];
+const TinyBarChart = () => {
+  const [chartData, setChartData] = useState([
+    { name: 'Credit', count: 0 },
+    { name: 'Debit', count: 0 },
+  ]);
 
-export default class TinyBarChart extends PureComponent {
-  static demoUrl = 'https://codesandbox.io/p/sandbox/tiny-bar-chart-xzyy8g';
+  useEffect(() => {
+    const raw = localStorage.getItem('transactionCounts');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const data = [
+          { name: 'Credit', count: parsed.transaction_counts.credit || 0 },
+          { name: 'Debit', count: parsed.transaction_counts.debit || 0 },
+        ];
+        setChartData(data);
+      } catch (err) {
+        console.error('Error parsing transactionCounts from localStorage:', err);
+      }
+    }
+  }, []);
 
-  render() {
-    return (
-      <ResponsiveContainer width="70%" height="70%">
-        <BarChart width={80} height={40} data={data}>
-          <Bar dataKey="uv" fill="#8884d8" />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  }
-}
+  return (
+    <ResponsiveContainer width="70%" height={300}>
+      <BarChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 14 }}
+        />
+        <YAxis allowDecimals={false} />
+        <Tooltip />
+        <Bar dataKey="count" fill="#82ca9d" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
+
+export default TinyBarChart;
