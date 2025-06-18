@@ -16,8 +16,8 @@ export default function DescriptionTable() {
   }, []);
 
   return (
-    <div className="my-8">
-      <h2 className="text-2xl font-semibold mb-4">Description Summary</h2>
+    <div className="">
+      
       <table className="min-w-full table-auto border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-100">

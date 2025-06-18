@@ -17,7 +17,9 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 class BankStatementProcessor:
     def __init__(self):
-        self.model = genai.GenerativeModel("models/gemini-1.5-pro")
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
+
+
         # Get categories from database
         self.categories = self._get_categories_from_db()
         
